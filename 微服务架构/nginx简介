@@ -1,0 +1,71 @@
+### Nginx快速入门
+
+Nginx是异步框架的 Web服务器，也可以用作反向代理，负载平衡器和HTTP缓存。
+
+Nginx由一个Master进程和若干Worker进程组成，其中Master进程主要用来读取配置和协调Worker进程。Worker进程则是真正完成工作的工人，例如处理外部请求。Nginx使用系统定义的事件驱动的方式来高效率的处理连接请求。
+
+Nginx的配置文件默认放置在`/etc/nginx/nginx.conf`。
+
+可以通过`nginx -s`来控制nginx，例如`nginx -s reload`重新读取配置文件并重启nginx，`nginx -s quit`关闭nginx进程。
+
+#### Nginx配置文件的结构
+
+一个简单的Nginx配置文件如下所示。Nginx配置文件是由简单语句和快语句组成。简单语句是由形如`name parameters;`,由名字和参数通过空格分隔组成，然后分号结尾。快语句就是类似于`http {}`，由指示符和大括号组成。
+
+```nginx
+http {
+    server {
+        location / {
+    		root /data/www;
+		}
+    }
+}
+```
+
+#### 配置Proxy和FastCGI
+
+Nginx的配置文件一般可以包含多个server，每个server可以包含`server_name`和`listen`，外部请求可以通过这些参数来匹配一个对应的server。
+
+location则是用于匹配对应server的请求。server可以包含多个location，如下面代码示例。
+
+```nginx
+server {
+    location / {
+        root /data/www;
+    }
+
+    location /images/ {
+        root /data;
+    }
+}
+```
+
+nginx会根据最长匹配规则来进行匹配，跟location出现的顺序无关。例如，对于`/images/hello.png`来说，nginx将会使用`location /images/`来处理请求（尽管`location /`匹配了URL，但是它不是最长匹配的）。
+
+对于每个请求，nginx将会把匹配的URI增加到`root`所指定的路径之后来作为最终发送的文件路径。例如对于外部请求`http://localhost/images/example.png`，nginx将会发送`/data/example.png`文件内容作为响应。
+
+location也可以使用正则表达式来匹配请求。
+
+```nginx
+location ~ \.(gif|jpg|png)$ {
+    root /data/images;
+}
+```
+
+正则表达式匹配以`~`开头，上述代码就表示所有`.gif`，`.jpg`，`.png`结尾的请求都会映射到`/data/images`目录上。
+
+Nginx也可以当作反向代理服务器。
+
+```nginx
+server {
+    location / {
+        proxy_pass http://localhost:8080;
+    }
+
+    location /images/ {
+        root /data;
+    }
+}
+```
+
+上述代码就把所有非`images`的请求都代理到`http://localhost:8080`服务器。
